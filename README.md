@@ -32,8 +32,6 @@ The Mac Mini Agent solves this with four purpose-built CLIs.
 
 Two Skills, Four CLIs. Many Macs. Full agent autonomy.
 
-Build the system that builds the system.
-
 ---
 
 ## Who Is This For?
