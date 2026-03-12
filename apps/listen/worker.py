@@ -1,10 +1,12 @@
-"""Job worker — runs a Claude Code agent in a visible Terminal window.
+"""Job worker — runs a Claude Code agent in a tmux session.
 
-Creates a headed tmux session, sends the claude command with sentinel
-markers, polls for completion, then updates the job YAML.
+Creates a tmux session (headed on macOS via Terminal.app, detached on Linux),
+sends the claude command with sentinel markers, polls for completion,
+then updates the job YAML.
 """
 
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -17,6 +19,7 @@ import yaml
 
 SENTINEL_PREFIX = "__JOBDONE_"
 POLL_INTERVAL = 2.0
+IS_LINUX = platform.system() == "Linux"
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -30,14 +33,19 @@ def _session_exists(name: str) -> bool:
 
 
 def _open_terminal(session_name: str, cwd: str) -> None:
-    """Open a new Terminal.app window with a tmux session attached."""
-    tmux_cmd = f"cd '{cwd}' && tmux new-session -A -s {session_name}"
-    escaped = tmux_cmd.replace("\\", "\\\\").replace('"', '\\"')
-    subprocess.run(
-        ["osascript", "-e", f'tell application "Terminal" to do script "{escaped}"'],
-        capture_output=True,
-        text=True,
-    )
+    """Create a tmux session. On macOS opens Terminal.app, on Linux runs detached."""
+    if IS_LINUX:
+        # Detached tmux session — no GUI terminal needed
+        _tmux("new-session", "-d", "-s", session_name, "-c", cwd)
+    else:
+        # macOS: open a headed Terminal.app window
+        tmux_cmd = f"cd '{cwd}' && tmux new-session -A -s {session_name}"
+        escaped = tmux_cmd.replace("\\", "\\\\").replace('"', '\\"')
+        subprocess.run(
+            ["osascript", "-e", f'tell application "Terminal" to do script "{escaped}"'],
+            capture_output=True,
+            text=True,
+        )
     # Wait for session to appear
     deadline = time.monotonic() + 5.0
     while time.monotonic() < deadline:
