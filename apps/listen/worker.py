@@ -1,12 +1,10 @@
-"""Job worker — runs a Claude Code agent in a tmux session.
+"""Job worker — runs a Claude Code agent in a detached tmux session.
 
-Creates a tmux session (headed on macOS via Terminal.app, detached on Linux),
-sends the claude command with sentinel markers, polls for completion,
-then updates the job YAML.
+Creates a tmux session, sends the claude command with sentinel
+markers, polls for completion, then updates the job YAML.
 """
 
 import os
-import platform
 import re
 import subprocess
 import sys
@@ -19,7 +17,6 @@ import yaml
 
 SENTINEL_PREFIX = "__JOBDONE_"
 POLL_INTERVAL = 2.0
-IS_LINUX = platform.system() == "Linux"
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -32,21 +29,9 @@ def _session_exists(name: str) -> bool:
     return result.returncode == 0
 
 
-def _open_terminal(session_name: str, cwd: str) -> None:
-    """Create a tmux session. On macOS opens Terminal.app, on Linux runs detached."""
-    if IS_LINUX:
-        # Detached tmux session in bash — avoid fish/zsh sentinel incompatibility
-        _tmux("new-session", "-d", "-s", session_name, "-c", cwd, "bash")
-    else:
-        # macOS: open a headed Terminal.app window
-        tmux_cmd = f"cd '{cwd}' && tmux new-session -A -s {session_name}"
-        escaped = tmux_cmd.replace("\\", "\\\\").replace('"', '\\"')
-        subprocess.run(
-            ["osascript", "-e", f'tell application "Terminal" to do script "{escaped}"'],
-            capture_output=True,
-            text=True,
-        )
-    # Wait for session to appear
+def _open_session(session_name: str, cwd: str) -> None:
+    """Create a detached tmux session in bash."""
+    _tmux("new-session", "-d", "-s", session_name, "-c", cwd, "bash")
     deadline = time.monotonic() + 5.0
     while time.monotonic() < deadline:
         if _session_exists(session_name):
@@ -129,8 +114,7 @@ def main():
     os.environ.update(env_clean)
 
     try:
-        # Open headed Terminal window with tmux session
-        _open_terminal(session_name, str(repo_root))
+        _open_session(session_name, str(repo_root))
 
         # Send the wrapped command
         _send_keys(session_name, wrapped)
