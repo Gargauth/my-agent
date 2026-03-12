@@ -51,6 +51,13 @@ def latest_jobs(url: str, n: int = 1) -> str:
     return "---\n".join(parts)
 
 
+def job_log(url: str, job_id: str, lines: int = 80) -> str:
+    """GET url/job/{job_id}/log, returns live tmux pane output."""
+    response = httpx.get(f"{url}/job/{job_id}/log", params={"lines": lines})
+    response.raise_for_status()
+    return response.text
+
+
 def stop_job(url: str, job_id: str) -> dict:
     """DELETE url/job/{job_id}, returns response dict."""
     response = httpx.delete(f"{url}/job/{job_id}")

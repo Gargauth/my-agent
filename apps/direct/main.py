@@ -55,6 +55,28 @@ def latest(url: str, n: int):
 @cli.command()
 @click.argument("url")
 @click.argument("job_id")
+@click.option("-n", "--lines", default=80, help="Number of lines to capture")
+@click.option("-f", "--follow", is_flag=True, help="Follow output (poll every 2s)")
+def log(url: str, job_id: str, lines: int, follow: bool):
+    """Show live tmux output of a running job."""
+    import time
+
+    output = client.job_log(url, job_id, lines=lines)
+    click.echo(output)
+    if follow:
+        prev = output
+        while True:
+            time.sleep(2)
+            output = client.job_log(url, job_id, lines=lines)
+            if output != prev:
+                click.clear()
+                click.echo(output)
+                prev = output
+
+
+@cli.command()
+@click.argument("url")
+@click.argument("job_id")
 def stop(url: str, job_id: str):
     """Stop a running job."""
     result = client.stop_job(url, job_id)

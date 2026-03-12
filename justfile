@@ -36,6 +36,14 @@ jobs *flags:
 latest n="1" url=default_url:
     cd apps/direct && uv run python main.py latest {{url}} {{n}}
 
+# Show live output of a running job
+log id url=default_url:
+    cd apps/direct && uv run python main.py log {{url}} {{id}}
+
+# Follow live output of a running job (refreshes every 2s)
+logf id url=default_url:
+    cd apps/direct && uv run python main.py log {{url}} {{id}} --follow
+
 # Stop a running job
 stop id url=default_url:
     cd apps/direct && uv run python main.py stop {{url}} {{id}}

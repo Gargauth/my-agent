@@ -95,6 +95,32 @@ def clear_jobs():
     return {"archived": count}
 
 
+@app.get("/job/{job_id}/log", response_class=PlainTextResponse)
+def job_log(job_id: str, lines: int = 80):
+    """Capture live tmux pane output for a running job."""
+    job_file = JOBS_DIR / f"{job_id}.yaml"
+    if not job_file.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    with open(job_file) as f:
+        data = yaml.safe_load(f)
+
+    session = data.get("session")
+    if not session:
+        return f"(job {job_id} has no tmux session)"
+
+    result = subprocess.run(
+        ["tmux", "capture-pane", "-p", "-t", f"{session}:", "-S", str(-lines)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        status = data.get("status", "unknown")
+        return f"(session '{session}' not found — job status: {status})"
+
+    return result.stdout
+
+
 @app.delete("/job/{job_id}")
 def stop_job(job_id: str):
     job_file = JOBS_DIR / f"{job_id}.yaml"
