@@ -35,8 +35,8 @@ def _session_exists(name: str) -> bool:
 def _open_terminal(session_name: str, cwd: str) -> None:
     """Create a tmux session. On macOS opens Terminal.app, on Linux runs detached."""
     if IS_LINUX:
-        # Detached tmux session — no GUI terminal needed
-        _tmux("new-session", "-d", "-s", session_name, "-c", cwd)
+        # Detached tmux session in bash — avoid fish/zsh sentinel incompatibility
+        _tmux("new-session", "-d", "-s", session_name, "-c", cwd, "bash")
     else:
         # macOS: open a headed Terminal.app window
         tmux_cmd = f"cd '{cwd}' && tmux new-session -A -s {session_name}"
